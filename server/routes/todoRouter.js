@@ -9,9 +9,9 @@ router.get('/:list_id', todoHandler.showAllTodo)
 router.post('/:list_id', todoHandler.createTodo)
 
 // updates a existing list
-router.put('/:todo_id', todoHandler.updateTodo)
+router.put('/:list_id/:todo_id', todoHandler.updateTodo)
 
 // delete a list
-router.delete('/:todo_id', todoHandler.deleteTodo)
+router.delete('/:list_id/:todo_id', todoHandler.deleteTodo)
 
 module.exports = router

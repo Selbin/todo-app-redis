@@ -19,7 +19,6 @@ const createList = async (req, res) => {
     if (length > 0) {
       id = parseInt(await client.lindex('listids', 0)) + 1
     }
-    console.log(id)
     await client.lpush('listids', id)
     await client.hset(id, 'id', id, 'listname', listName, 'todo', '[]')
     res.status(200).json({ msg: 'success' })

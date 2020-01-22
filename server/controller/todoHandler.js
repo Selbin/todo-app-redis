@@ -1,14 +1,7 @@
-const redis = require('redis')
-
+const { client } = require('../models/connect')
 const createError = (status, message) => {
   return { status, message }
 }
-
-const client = redis.createClient({
-  port: 6379,
-  host: 'localhost',
-  password: null
-})
 
 /*
 createTodo
@@ -17,26 +10,36 @@ updateTodo
 deleteTodo
 */
 
-const createTodo = (req, res) => {
+const createTodo = async (req, res) => {
   const listId = req.params.list_id
   const todoName = req.body.todoName
-  const query =
-    'INSERT INTO todo (listid, todoname) VALUES ($1, $2) RETURNING *'
+  console.log(listId, todoName)
   try {
-    const result = await exeQuery(query, [listId, todoName])
-    res.status(200).json(result.rows[0])
-  } catch (e) {
-    res.status(500).json(createError(500, 'todo creation failed'))
+    const todo = JSON.parse(await client.hget(listId, 'todo'))
+    let todoId = 1
+    if (todo.length !== 0) todoId = todo[0].id + 1
+    const newTodo = {
+      id: todoId,
+      name: todoName,
+      complete: false,
+      scheduled: false,
+      priority: 'low',
+      note: ''
+    }
+    todo.push(newTodo)
+    await client.hset(listId, 'todo', JSON.stringify(todo))
+    res.status(200).json({ msg: 'success' })
+  } catch (error) {
+    res.status(500).json(createError(500, 'Todo creation failed ' + error))
   }
 }
 
 const showAllTodo = async (req, res) => {
   const listId = req.params.list_id
-  const query = 'SELECT * FROM todo WHERE listid = $1'
   try {
-    const result = await exeQuery(query, [listId])
-    if (result.rowCount > 0) res.status(200).json(result.rows)
-    else res.status(200).json({ message: 'todo is empty' })
+    const todo = JSON.parse(await client.hget(listId, 'todo'))
+    if (todo.length === 0) res.status(200).json({ msg: 'todo is empty' })
+    res.status(200).json(todo)
   } catch (e) {
     res.status(500).json(createError(500, 'fetch failed'))
   }
@@ -44,11 +47,15 @@ const showAllTodo = async (req, res) => {
 
 const deleteTodo = async (req, res) => {
   const todoId = req.params.todo_id
-  const query = 'DELETE FROM todo WHERE id = $1 RETURNING *'
+  const listId = req.params.list_id
   try {
-    const result = await exeQuery(query, [todoId])
-    if (result.rowCount > 0) res.status(200).json(result.rows[0])
-    else res.status(404).json(createError(404, 'todo not found'))
+    const todos = JSON.parse(await client.hget(listId, 'todo'))
+    if (todos.length === 0) res.status(404).json(createError(404, 'todo not found'))
+    for (const todo of todos) {
+      if (todo.id === parseInt(todoId)) todos.splice(todos.indexOf(todo), 1)
+    }
+    await client.hset(listId, 'todo', JSON.stringify(todos))
+    res.status(200).json({ msg: 'success' })
   } catch (e) {
     res.status(500).json(createError(500, 'todo deletion failed'))
   }
@@ -56,16 +63,21 @@ const deleteTodo = async (req, res) => {
 
 const updateTodo = async (req, res) => {
   const todoId = req.params.todo_id
+  const listId = req.params.list_id
   const column = req.body.column
   const value = req.body.value
-  const query = `UPDATE todo SET ${column} = $1 WHERE id = $2 RETURNING *`
   try {
-    const result = await exeQuery(query, [value, todoId])
-    if (result.rowCount > 0) res.status(200).json(result.rows[0])
-    else res.status(404).json(createError(404, 'todo not found'))
+    const todos = JSON.parse(await client.hget(listId, 'todo'))
+    if (todos.length === 0) res.status(404).json(createError(404, 'todo not found'))
+    for (const todo of todos) {
+      if (todo.id === parseInt(todoId)) todo[column] = value
+    }
+    console.log(todos)
+    await client.hset(listId, 'todo', JSON.stringify(todos))
+    res.status(200).json({ msg: 'success' })
   } catch (e) {
     res.status(500).json(createError(500, 'updation failed'))
   }
 }
 
-module.exports = { showAllTodo, createTodo, updateTodo, deleteTodo }
+module.exports = { createTodo, showAllTodo, updateTodo, deleteTodo }
