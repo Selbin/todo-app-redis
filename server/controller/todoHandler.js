@@ -15,20 +15,24 @@ const createTodo = async (req, res) => {
   const todoName = req.body.todoName
   console.log(listId, todoName)
   try {
-    const todo = JSON.parse(await client.hget(listId, 'todo'))
+    let todos = JSON.parse(await client.hget(listId, 'todo'))
     let todoId = 1
-    if (todo.length !== 0) todoId = todo[0].id + 1
+    if (todos.length !== 0) todoId = todos[todos.length - 1].id + 1
     const newTodo = {
+      listid: listId,
       id: todoId,
-      name: todoName,
-      complete: false,
+      todoname: todoName,
+      completed: false,
       scheduled: false,
       priority: 'low',
       note: ''
     }
-    todo.push(newTodo)
-    await client.hset(listId, 'todo', JSON.stringify(todo))
-    res.status(200).json({ msg: 'success' })
+    todos.push(newTodo)
+    await client.hset(listId, 'todo', JSON.stringify(todos))
+    todos = JSON.parse(await client.hget(listId, 'todo'))
+    for (const todo of todos) {
+      if (todo.id === todoId) return res.status(200).json(todo)
+    }
   } catch (error) {
     res.status(500).json(createError(500, 'Todo creation failed ' + error))
   }
@@ -38,7 +42,7 @@ const showAllTodo = async (req, res) => {
   const listId = req.params.list_id
   try {
     const todo = JSON.parse(await client.hget(listId, 'todo'))
-    if (todo.length === 0) res.status(200).json({ msg: 'todo is empty' })
+    if (todo.length === 0) return res.status(404).json({ msg: 'todo is empty' })
     res.status(200).json(todo)
   } catch (e) {
     res.status(500).json(createError(500, 'fetch failed'))
@@ -50,7 +54,7 @@ const deleteTodo = async (req, res) => {
   const listId = req.params.list_id
   try {
     const todos = JSON.parse(await client.hget(listId, 'todo'))
-    if (todos.length === 0) res.status(404).json(createError(404, 'todo not found'))
+    if (todos.length === 0) return res.status(404).json(createError(404, 'todo not found'))
     for (const todo of todos) {
       if (todo.id === parseInt(todoId)) todos.splice(todos.indexOf(todo), 1)
     }
@@ -68,7 +72,7 @@ const updateTodo = async (req, res) => {
   const value = req.body.value
   try {
     const todos = JSON.parse(await client.hget(listId, 'todo'))
-    if (todos.length === 0) res.status(404).json(createError(404, 'todo not found'))
+    if (todos.length === 0) return res.status(404).json(createError(404, 'todo not found'))
     for (const todo of todos) {
       if (todo.id === parseInt(todoId)) todo[column] = value
     }

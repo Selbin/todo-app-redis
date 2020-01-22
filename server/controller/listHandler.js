@@ -15,14 +15,16 @@ const createList = async (req, res) => {
   let id = 1
   try {
     const length = await client.llen('listids')
-    console.log(length)
     if (length > 0) {
       id = parseInt(await client.lindex('listids', 0)) + 1
     }
     await client.lpush('listids', id)
     await client.hset(id, 'id', id, 'listname', listName, 'todo', '[]')
-    res.status(200).json({ msg: 'success' })
+    const result = await client.hgetall(id)
+    console.log(result)
+    res.status(200).json(result)
   } catch (error) {
+    console.log(error)
     res.status(500).json(createError(500, 'list creation failed'))
   }
 }
@@ -31,7 +33,6 @@ const showAllList = async (req, res) => {
   const result = []
   try {
     const listIds = await client.lrange('listids', 0, -1)
-    console.log(listIds)
     for (const id of listIds) {
       const data = await client.hgetall(id)
       result.push(data)

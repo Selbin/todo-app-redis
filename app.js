@@ -8,6 +8,7 @@ const app = express()
 dotenv.config()
 
 app.use(express.json())
+app.use('/', express.static('app'))
 app.use('/list', listRoutes)
 app.use('/todo', todoRoutes)
 
