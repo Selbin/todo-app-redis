@@ -14,6 +14,14 @@ body {
     justify-content: start;
 }
 
+textarea {
+    resize: none;
+}
+
+.disabled {
+    display: none
+}
+
 .btn {
     border-width: 0;
     min-width: 100px;

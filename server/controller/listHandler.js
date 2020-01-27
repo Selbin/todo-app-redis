@@ -1,4 +1,4 @@
-const { client } = require('../models/connect')
+const { lpush, lrange, hset, hgetall, lindex, lrem, hdel } = require('../models/connect')
 /*
 createList
 showAllList
@@ -12,17 +12,16 @@ const createError = (status, message) => {
 
 const createList = async (req, res) => {
   const { listName } = req.body
-  let id = 1
   try {
-    const length = await client.llen('listids')
-    if (length > 0) {
-      id = parseInt(await client.lindex('listids', 0)) + 1
-    }
-    await client.lpush('listids', id)
-    await client.hset(id, 'id', id, 'listname', listName, 'todo', '[]')
-    const result = await client.hgetall(id)
+    let id = await lindex('listids', 0)
+    if (id === null) id = 1
+    else id = parseInt(id) + 1
+    console.log(id)
+    await lpush('listids', id)
+    await hset(id, 'id', id, 'listname', listName, 'todo', '[]')
+    const result = await hgetall(id)
     console.log(result)
-    res.status(200).json(result)
+    res.status(201).json(result)
   } catch (error) {
     console.log(error)
     res.status(500).json(createError(500, 'list creation failed'))
@@ -32,9 +31,9 @@ const createList = async (req, res) => {
 const showAllList = async (req, res) => {
   const result = []
   try {
-    const listIds = await client.lrange('listids', 0, -1)
+    const listIds = await lrange('listids', 0, -1)
     for (const id of listIds) {
-      const data = await client.hgetall(id)
+      const data = await hgetall(id)
       result.push(data)
     }
     res.status(200).json(result)
@@ -47,7 +46,7 @@ const updateList = async (req, res) => {
   const { listName } = req.body
   const id = req.params.list_id
   try {
-    await client.hset(id, 'listname', listName)
+    await hset(id, 'listname', listName)
     res.status(200).json({ msg: 'success' })
   } catch (error) {
     res.status(500).json(createError(500, 'list updation failed'))
@@ -57,8 +56,8 @@ const updateList = async (req, res) => {
 const deleteList = async (req, res) => {
   const id = req.params.list_id
   try {
-    await client.hdel(id, 'id', 'listname', 'todo')
-    await client.lrem('listids', 0, id)
+    await hdel(id, 'id', 'listname', 'todo')
+    await lrem('listids', 0, id)
     res.status(200).json({ msg: 'success' })
   } catch (error) {
     res.status(500).json(createError(500, 'list deletion failed'))

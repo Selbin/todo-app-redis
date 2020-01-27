@@ -136,8 +136,9 @@ function renderList (list) {
 
 // to render todos
 function rendertodo (todo) {
-  let complete
+  let complete, disabled
   todo.completed ? (complete = 'line-through') : (complete = 'none')
+  todo.completed ? (disabled = 'disabled') : (disabled = 'todo-operations')
   document.getElementById('todo' + todo.listid).appendChild(
     createElement(
       'div',
@@ -167,7 +168,7 @@ function rendertodo (todo) {
       ),
       createElement(
         'div',
-        { className: 'todo-operations' },
+        { className: `${disabled}` },
         createElement('i', {
           id: `cl${todo.id}`,
           className: 'far fa-calendar'
@@ -229,7 +230,7 @@ function sortTodo (tasks) {
     return new Date(a.scheduled) - new Date(b.scheduled)
   })
   tasks.sort((a, b) => {
-    if (a.priority === b.priority) return 1
+    if (a.priority === b.priority) return 0
     if (a.priority === 'low') return 1
     if (a.priority === 'high') return -1
     if (b.priority === 'low') return -1
@@ -439,18 +440,10 @@ async function todoComplete (event) {
   }
 }
 
+// to set priority
 async function setPriority (event) {
   const todoContainer = event.target.parentNode.parentNode.parentNode.parentNode
   const id = event.target.id.slice(2)
-  if (event.target.value === 'low') {
-    event.target.parentNode.parentNode.style.color = 'whitesmoke'
-  }
-  if (event.target.value === 'medium') {
-    event.target.parentNode.parentNode.style.color = '#c7822f'
-  }
-  if (event.target.value === 'high') {
-    event.target.parentNode.parentNode.style.color = 'rgb(189,60,60)'
-  }
   await fetchData(
     baseUrl + 'todo/' + todoContainer.id.slice(2) + '/' + id,
     'PUT',
@@ -497,7 +490,7 @@ addList.addEventListener('click', event => {
           'application/json',
           JSON.stringify({ listName })
         )
-        if (response.status !== 200) return
+        if (response.status !== 201) return
         const result = await response.json()
         renderList(result)
         event.target.parentNode.parentNode.querySelector(
